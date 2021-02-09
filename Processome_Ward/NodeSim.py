@@ -6,6 +6,9 @@ from nltk.corpus import stopwords
 from gensim.models.phrases import Phrases, Phraser
 from icecream import ic
 from gensim.models import Word2Vec
+import gensim.downloader as api
+
+
 
 '''
 ##########################################################################################
@@ -87,58 +90,51 @@ class NodeSim:
 
     '''
     FUNCTION : processStrings()
-    INPUT:  labels: list of labels or strings to be processed for model comparisons.
-            NOTE: if element of list is not of type string it will be ignored.
-            removeParenthesis: default = True. if True parenthesis will be removed and processed seperately.
-    OUTPUT: pandas dataframe containing raw input labels, cleaned labels, and parenthesis labels (if removeParenthesis = True)
-    DESCRIPTION: this will be a pre-processing step to get data ready for the model comparisons.
+    INPUT:  labels: (list), list of labels or strings to be processed for comparisons. [ Required Param ]
+                NOTE: if element of list is not of type = string it will be ignored.
+            removeParentheses: (boolean), if True parentheses will be removed and processed seperately. [ default = False ]
+            termsToBeRemoved: (list), list of predetermined words to be removed. [default = [] ]
+            removeStopWords: (boolean), if True given set of stopwords will be removed. [ default = True ]
+            stopWords : (set), set of stopwords to be removed. [default = NLTK english stopwords. link : https://gist.github.com/sebleier/554280]
+            locateBigrams : (boolean), if True will locate and concat  bigrams with given minimum count. [ default = False ]
+            bigramMinCount : (int), minimum count for a bigram to appear to be processed as a bigram (combined) [default = 5]
+                EX: if adjacent terms ['artificial', 'sweetener'] are found > 5 times, all instances will be concatenated to ['artificial sweetener']
+    OUTPUT: pandas dataframe containing raw input labels, cleaned labels, (and parentheses labels if removeParentheses = True)
+    DESCRIPTION: this will be a string pre-processing step to get data ready for the model comparisons.
     '''
-    def processStrings(self, labels, removeParenthesis = True, termsToBeRemoved :list = [], removeStopWords = True, stopWords : set = STOP_WORDS_ENGLISH, locateBigrams = True, bigramMinCount = 5):
+    def processStrings(self, labels, removeParentheses: bool = False, termsToBeRemoved :list = [], removeStopWords: bool = True, stopWords : set = STOP_WORDS_ENGLISH, locateBigrams: bool = False, bigramMinCount: int = 5):
 
-        # add our
-        # if removeStopWords:
-        #     termsToBeRemoved.extend(stopWords)
-        # ic(termsToBeRemoved)
-
-        if removeParenthesis:
+        if removeParentheses:
 
             clean = []
-            parenthesis = []
+            parentheses = []
 
             for term in labels:
-                # do a quick type check, (th)
+                # quick type check:
                 if (type(term) == str):
-                    # find and seperate info in parenthesis
+                    # find and seperate info in parentheses
                     par = re.findall('\(.*\)', term, flags=0)
                     # find all will create a list so we just need to turn them into a string
                     pars = " ".join(par)
                     s = re.sub('\(.*\)', '', term)
 
-                    # print("pars :", pars)
-
                     # Clean the labels
                     par = cleanString(pars, termsToBeRemoved)
                     s = cleanString(s, termsToBeRemoved)
 
-                    # print("par :", par)
-                    # print("type : ", type(par))
+
                     # Tokenize the labels
                     par = par.split(' ')
                     s = s.split(' ')
 
-                    '''
-                    Remove StopWords
-                    - going to run this only on the non-empty strings to save time.
-                    '''
-
-
-                    # check that there are real strings
+                    # Remove StopWords
+                    # - going to run this only on the non-empty strings to save time.
                     if par != ['']:
                         if removeStopWords:
                             par = filterStopWords(par, stopWords)
-                        parenthesis.append(par)
+                        parentheses.append(par)
                     else:
-                        parenthesis.append([])
+                        parentheses.append([])
 
                     if s != ['']:
                         if removeStopWords:
@@ -146,12 +142,10 @@ class NodeSim:
                         clean.append(s)
                     else:
                         clean.append([])
-                    # ic(clean)
-                    # ic(parenthesis)
 
                 else:
                     clean.append([])
-                    parenthesis.append([])
+                    parentheses.append([])
 
 
 
@@ -160,15 +154,14 @@ class NodeSim:
             '''
             if locateBigrams:
                 clean = findBigrams(clean, bigramMinCount)
-                parenthesis = findBigrams(parenthesis, bigramMinCount)
-
-                # ic(clean)
-                # ic(parenthesis)
+                parentheses = findBigrams(parentheses, bigramMinCount)
 
             # now we'll just make a df and return the values
-            return pd.DataFrame({'raw': labels, 'clean': clean, 'parenthesis': parenthesis})
+            return pd.DataFrame({'raw': labels, 'clean': clean, 'parentheses': parentheses})
 
-        # we arent going to treat the parenthesis seperately.
+            '''
+            We are NOT going to treat the parentheses seperately.
+            '''
         else :
 
             clean = []
@@ -183,12 +176,10 @@ class NodeSim:
                     # Tokenize the labels
                     s = s.split(' ')
 
-
                     if s != ['']:
                         clean.append(s)
                     else:
                         clean.append([])
-
                 else:
                     clean.append([])
 
@@ -201,7 +192,7 @@ class NodeSim:
 
 
     '''
-    FUNCTION : modelSim
+    FUNCTION : SimHelper
     INPUT:  model: gensim Word2Vec Model to be used for comparison
             termsA: list of strings to be compared
             termsB: list of strings to be compared
@@ -210,8 +201,7 @@ class NodeSim:
     OUTPUT: Similarity Value : 0.0 - 1.0
     DESCRIPTION: this function will take the given model and use it to compare the two given lists of terms.
     '''
-
-    def Sim(self, model : Word2Vec, termsA : list, termsB : list, considerRemoved : bool = False, removedWeight: float = 0.5):
+    def simHelper(self, model : Word2Vec, termsA : list, termsB : list, considerRemoved : bool = False, removedWeight: float = 0.1):
 
         # check that removedWeight is on the scale of 0.0 - 1.0
         if removedWeight < 0.0 or removedWeight > 1.0:
@@ -253,58 +243,110 @@ class NodeSim:
         else:
             return 0.0
 
-
     '''
-    FUNCTION : SimWithParenthesis
+    FUNCTION : Sim
     INPUT:  model: gensim Word2Vec Model to be used for comparison
-            termsA_outsideP: list of strings outside parenthesis from label A
-            termsA_insideP: list of strings inside parenthesis from label A
-            termsB_outsideP: list of strings outside parenthesis from label B
-            termsB_insideP: list of strings inside parenthesis from label B
-            pWeight: weight of which to apply to information within the parenthesis
-            considerRemoved: boolean, if True, the ratio of removed terms will be considered. [Default = True]
-            removedWeight: 0.0 - 1.0 weight for how the removed terms should affect the
-    OUTPUT: Similarity Value : 0.0 - 1.0
+            termsA: (list), list of strings for label_A, if considering parentheses, do not include words within parentheses.
+            termsB: (list), list of strings for label_B, if considering parentheses, do not include words within parentheses.
+            considerParentheses: (boolean) if True we will consider terms within parentheses seperately. [default= False]
+                Note:   - terms within parentheses must be included in related argument.
+            termsA_insideP: (list), list of strings inside parentheses from label A. [default = []]
+            termsB_insideP: (list), list of strings inside parentheses from label B. [default = []]
+            pWeight: (float)  0.0 - 1.0  weight of which to apply to information within the parentheses. [default = 0.1]
+            considerRemoved: (boolean), if True, the ratio of removed terms will be considered. [Default = True]
+            removedWeight: (float) 0.0 - 1.0 weight for how the removed terms should affect the similarity value. [default = 0.1]
+    OUTPUT: (float) 0.0 - 1.0 : similarity value
     DESCRIPTION: this function will take the given model and use it to compare the two labels, treating the information
-                inside the parenthesis separately and weighted.
+                inside the parentheses separately and weighted.
     '''
-    def SimWithParenthesis(self, model : Word2Vec, termsA_outsideP : list, termsA_insideP : list, termsB_outsideP : list, termsB_insideP : list, pWeight : float = 0.5, considerRemoved : bool = False, removedWeight : float = 0.5):
+    def sim(self, model : Word2Vec, termsA: list, termsB : list, considerParentheses : bool = False, termsA_insideP : list = [], termsB_insideP : list = [], pWeight : float = 0.1, considerRemoved : bool = False, removedWeight : float = 0.1):
 
         # check that pWeight is on the scale of 0.0 - 1.0
         if pWeight < 0.0 or pWeight > 1.0:
             raise ValueError("pWeight parameter must be 0.0 - 1.0")
 
+        if removedWeight < 0.0 or removedWeight > 1.0:
+            raise ValueError("removedWeight parameter must be 0.0 - 1.0")
+
+        # do we want to consider parentheses separately?
+        if considerParentheses:
+            simVal = self.simHelper(model, termsA, termsB, considerRemoved, removedWeight)
+
+            # only need to consider this if they both exist.
+            if len(termsA_insideP) > 0 and len(termsB_insideP) > 0:
+                simVal_P = self.simHelper(model, termsA_insideP, termsB_insideP, considerRemoved, removedWeight)
+
+                weightedVal = (simVal * (1 - pWeight)) + (simVal_P * pWeight)
+
+                return weightedVal
+
+            elif len(termsA_insideP) > 0 or len(termsB_insideP) > 0:
+                '''
+                So if ony one has anything in the parentheses we should still consider those as removed?
+                    - what else could we do?
+                    - if we just ignore it than we will end up with a lot of super similar values ( but in our case they should be )
+                    - I guess we should think of it the same way as removing words, so we will used the removedWeight.
+                '''
+                if considerRemoved:
+                    '''
+                    Now we want to account for words being removed but we need to be careful:
+                        - for labels with very few terms, this ratio could get very small.
+                        - we will allow user input to weight this ratio, with param: removedWeight
+                        - here we will use the total length of words in each label.
+                    '''
+
+                    P_removed = 1 - ((len(termsA) + len(termsB)) / (len(termsA) + len(termsA_insideP) + len(termsB) + len(termsB_insideP)))
+                    weighted = 1.0 - (P_removed * removedWeight)
+
+                    return  (simVal * weighted)
+
+                else:
+                    return simVal
 
 
-        simVal = self.Sim(model, termsA_outsideP, termsB_outsideP, considerRemoved, removedWeight)
-        # ic(simVal)
-        # only need to consider this if they both exist.
-        if len(termsA_insideP) > 0 and len(termsB_insideP) > 0:
-            simVal_P = self.Sim(model, termsA_insideP, termsB_insideP, considerRemoved, removedWeight)
-            # ic(simVal_P)
+        # we dont care about parentheses.
+        return self.simHelper(model, termsA, termsB, considerRemoved, removedWeight)
 
-            ratioVal = (simVal * (1 - pWeight)) + (simVal_P * pWeight)
-            # ic(ratioVal)
-            return ratioVal
-
-        else :
-            return simVal
 
 
     '''
     FUNCTION : SimAllNodes
-    ...
+    INPUT:  model: gensim Word2Vec Model to be used for comparison
+            labels: (list), list of labels to be compared.
+                Note:   - these should be pre-processed, each label should be a list of words.
+            parentheses: (list), list of parenthetical data from labels to be compared. [default = []]
+                Note:   - each i'th element should correnspond to the i'th label from labels.
+                        - These should be pre-processed, each element of list should be a list of words.
+            considerParentheses: (boolean) if True we will consider terms within parentheses seperately. [default= False]
+                Note:   - terms within parentheses must be included in related argument.
+            pWeight: (float)  0.0 - 1.0  weight of which to apply the information within the parentheses. [default = 0.1]
+            considerRemoved: (boolean), if True, the ratio of removed terms will be considered. [Default = True]
+            removedWeight: (float) 0.0 - 1.0 weight for how the removed terms should affect the similarity value. [default = 0.1]
+            includeLabels: (boolean) If True, resulting pandas dataframe will include the raw labels. [default= False]
+            includeThreshold: (boolean) If True, only similarities greater or eqaual to the given threshold will be added to the output.
+            threshold: (float)  Only similarities greater or equal to the given threshold will be added to the output . [default = 0.9]
 
+    OUTPUT: pandas dataFrame with all the compared values, of given labels.
+    DESCRIPTION: this function will compare all the given labels and will output a pandas DF with calculated similarity values.
     '''
-    def SimAllNodes(self, model, labels : list, parenthesis : list, considerParenthesis : bool = True, pWeight : float = 0.5, considerRemoved : bool = True, removedWeight : float = 0.5, includeLabels : bool = False, includeThreshold : bool = False, threshold : float = 1.1):
+    def simAll(self, model, labels : list, parentheses : list = [], considerParentheses : bool = True, pWeight : float = 0.1, considerRemoved : bool = True, removedWeight : float = 0.1, includeLabels : bool = False, includeThreshold : bool = False, threshold : float = 0.9):
 
-        if considerParenthesis:
-            if len(labels) != len(parenthesis):
-                raise ValueError("labels and parenthesis must be the same length")
-
+        '''
+        Argument Checks:
+        '''
         if includeThreshold:
             if threshold < 0.0 or threshold > 1.0:
                 raise ValueError("threshold must be 0.0 - 1.0")
+
+        if pWeight < 0.0 or pWeight > 1.0:
+            raise ValueError("pWeight parameter must be 0.0 - 1.0")
+
+        if removedWeight < 0.0 or removedWeight > 1.0:
+            raise ValueError("removedWeight parameter must be 0.0 - 1.0")
+
+        if considerParentheses:
+            if len(labels) != len(parentheses):
+                raise ValueError("labels and parentheses must be the same length")
 
             Similar = []
             n = len(labels)
@@ -312,14 +354,14 @@ class NodeSim:
             for i in range(n):
 
                 i_terms = labels[i]
-                i_paren = parenthesis[i]
+                i_paren = parentheses[i]
 
                 for j in range(i+1, n):
 
                     j_terms = labels[j]
-                    j_paren = parenthesis[j]
+                    j_paren = parentheses[j]
 
-                    simVal = self.SimWithParenthesis(model, i_terms, i_paren, j_terms, j_paren, pWeight, considerRemoved, removedWeight)
+                    simVal = self.Sim(model = model, considerParentheses = considerParentheses, termsA = i_terms, termsB = j_terms, termsA_insideP = i_paren, termsB_insideP = j_paren, pWeight = pWeight, considerRemoved = considerRemoved, removedWeight = removedWeight)
 
                     # check if we care about threshold.
                     if  (not includeThreshold) ^ (simVal >= threshold):
@@ -335,7 +377,7 @@ class NodeSim:
                 return pd.DataFrame(Similar, columns=['index_A','index_B', 'simVal'])
 
         else:
-            # we dont care about parenthesis:
+            # we dont care about parentheses:
             Similar = []
             n = len(labels)
             # iterate through each pair (i,j) and calculate their similarity via model.
@@ -345,7 +387,7 @@ class NodeSim:
                 for j in range(i+1, n):
                     j_terms = labels[j]
 
-                    simVal = self.Sim(model, i_terms, i_terms, considerRemoved, removedWeight)
+                    simVal = self.Sim(model = model, considerParentheses = False, termsA = i_terms, termsB = i_terms, considerRemoved = considerRemoved, removedWeight = removedWeight)
 
                     # check if we care about threshold.
                     if  (not includeThreshold) ^ (simVal >= threshold):
@@ -359,3 +401,68 @@ class NodeSim:
                 return pd.DataFrame(Similar, columns=['label_A','index_A', 'label_B','index_B', 'simVal'])
             else:
                 return pd.DataFrame(Similar, columns=['index_A','index_B', 'simVal'])
+
+    '''
+    FUNCTION : trainModelHelper
+    INPUT:  model: gensim Word2Vec Model to be used for comparison
+            document: list of sentences, sentences should be list of words
+            epochs: number of epochs for training.
+    OUTPUT: None, model will be trained in place.
+    DESCRIPTION: this is a helper function which builds on the vocabulary of a Gensim Word2Vec model.
+    '''
+    def trainModelHelper(self, model, document, epochs):
+        model.build_vocab(document, update=True)
+        model.train(document,total_examples=len(document), epochs = epochs)
+
+    '''
+    FUNCTION : trainModel
+    INPUT:  includeText8: (boolean), if True, text8 corpus (wikipedia word dump) will be used in model training. [default = True]
+                Note:   - it is reccomended to use the text 8 corpus unless you have a large enough corpus to successfuly train the model.
+                        - More on text8 data : http://mattmahoney.net/dc/textdata
+            corpora: (list) list of documents of which the model will be trained.
+                Note:   - Corpora should be a list of documents, which should be a list of sentences, which should be a list of words.
+                        - An example input of a single document might look like : [[['the', 'cat', 'in', 'the', 'hat'],['the', 'grinch']]]
+                        - These documents should be pre-processed.
+            epochsForTraining: (int), number of epochs desired for model training
+            word2VecArgs: (dictionary), dictionary of Word2Vec model arguments please see Word2Vec for argument details. https://radimrehurek.com/gensim/models/word2vec.html
+    OUTPUT: gensim Word2Vec Model
+    DESCRIPTION: This function will allow for basic training of a gensim Word2Vec model. please see gensim documentation for more details on
+    model training. [https://radimrehurek.com/gensim/models/word2vec.html]
+    '''
+    def trainModel(self, includeText8: bool = True, corpora = [], epochsForTraining: int = 10, word2VecArgs: dict = {}):
+        # some quick checks
+        if not includeText8 and len(corpora) < 1:
+            raise ValueError("There is no data to train the model, please check your input")
+
+        # should I do a check of the corpora type?
+        if len(corpora) > 1:
+            if not type(corpora[0]) is list:
+                if not type(corpora[0][0]) is list:
+                    raise ValueError("Error Invalid Argument : corpora should be a list of documents, documents should be a list of sentences, sentences should be a list of words")
+        '''
+        Train Model.
+        '''
+        if includeText8:
+            text8 = api.load('text8')
+
+            if len(word2VecArgs) == 0: # if no custom arguments were added.
+                model = Word2Vec(text8, min_count=3, size= 100, window =7, sg = 1)
+            else:
+                model = Word2Vec(text8, **word2VecArgs)
+        else:
+            # were not going to use text8.
+            if len(word2VecArgs) == 0: # if no custom arguments were added.
+                model = Word2Vec(corpora[0], min_count=3, size= 100, window =7, sg = 1)
+            else:
+                model = Word2Vec(corpora[0], **word2VecArgs)
+
+        # now we just need to build and train with included corpera.
+        if includeText8:
+            for document in corpora:
+                self.trainModelHelper(model, document, epochsForTraining)
+        else:
+            for document in corpora[1:]:
+                self.trainModelHelper(model, document, epochsForTraining)
+
+
+        return model
