@@ -361,7 +361,7 @@ class NodeSim:
                     j_terms = labels[j]
                     j_paren = parentheses[j]
 
-                    simVal = self.Sim(model = model, considerParentheses = considerParentheses, termsA = i_terms, termsB = j_terms, termsA_insideP = i_paren, termsB_insideP = j_paren, pWeight = pWeight, considerRemoved = considerRemoved, removedWeight = removedWeight)
+                    simVal = self.sim(model = model, considerParentheses = considerParentheses, termsA = i_terms, termsB = j_terms, termsA_insideP = i_paren, termsB_insideP = j_paren, pWeight = pWeight, considerRemoved = considerRemoved, removedWeight = removedWeight)
 
                     # check if we care about threshold.
                     if  (not includeThreshold) ^ (simVal >= threshold):
@@ -387,7 +387,7 @@ class NodeSim:
                 for j in range(i+1, n):
                     j_terms = labels[j]
 
-                    simVal = self.Sim(model = model, considerParentheses = False, termsA = i_terms, termsB = i_terms, considerRemoved = considerRemoved, removedWeight = removedWeight)
+                    simVal = self.sim(model = model, considerParentheses = False, termsA = i_terms, termsB = i_terms, considerRemoved = considerRemoved, removedWeight = removedWeight)
 
                     # check if we care about threshold.
                     if  (not includeThreshold) ^ (simVal >= threshold):
