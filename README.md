@@ -55,7 +55,7 @@ There are two methods for label comparison:
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **removeStopWords:** (boolean), if True given set of stopwords will be removed. [ default = True ]  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **stopWords:** (set), set of stopwords to be removed.[default = [nltk's english stop words](https://gist.github.com/sebleier/554280)  )  ]  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **locateBigrams:** (boolean), if True will locate and concat  bigrams with given minimum count. [ default = False ]  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **bigramMinCount:** (int), minimum count for a bigram to appear to be processed as a bigram (combined) [default=5]  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **bigramMinCount:** (int), min count for a bigram to appear to be processed (combined) [default=5]  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **Ex:** if adjacent terms ['artificial', 'sweetener'] are found > 5 times, all instances will be concatenated   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; to ['artificial sweetener']  
 
 **OUTPUT:** pandas dataframe containing raw input labels, cleaned labels, and parenthesis labels (if removeParenthesis = True)  
@@ -93,12 +93,12 @@ After the model has been created, it would then be the users choice to calculate
 **FUNCTION :** trainModel(...)
 
 **INPUT:**  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **includeText8:** (boolean), if True, text8 corpus (wikipedia word dump) will be used in model training. [default = True]  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - it is recommended to use the text 8 corpus unless you have a large enough corpus to &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   successfully train the model.  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **includeText8:** (boolean), if True, text8 corpus (wikipedia dump) will be used in model training. [default = True]  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - it is recommended to use the text 8 corpus unless you have a large enough corpus to train the model.  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -  [More on text8 data](http://mattmahoney.net/dc/textdata)  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **corpora:** (list) list of documents of which the model will be trained.     
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - Corpora should be a list of documents, which should be a list of sentences, which  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   should be a list of words.  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - An example input of a single document might look like : [[['the', 'cat', 'in', 'the', &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   'hat'],['the', 'grinch']]]  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - should be a list of documents, which should be a list of sentences, which should be a list of words.  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - An example input of a single document might look like : [[['the', 'cat'],['the', 'grinch']]]  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - These documents should be pre-processed.  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **epochsForTraining:** (list), (int), number of epochs desired for model training   
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **word2VecArgs:** (dictionary), dictionary of Word2Vec model arguments please see [Gensim documentation](https://radimrehurek.com/gensim/models/word2vec.html)  for argument details.
@@ -245,8 +245,8 @@ simVal_Final 1.0 = 1.0 * 1.0
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **considerRemoved:** (boolean), if True, the ratio of removed terms will be considered. [Default = True]  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **removedWeight:** (float) 0.0-1.0 weight for how the removed terms should affect the sim value. [default=0.1]   
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **includeLabels:** (boolean) If True, resulting pandas dataFrame will include the raw labels. [default= False]  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **includeThreshold:** (boolean) If True, only similarities greater or equal to the given threshold will be added to the output.     
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **threshold:**  (float)  Only sim values >= given threshold will be added to the output. [default=0.9]    
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **includeThreshold:** (boolean) If True, only sim values >= given threshold will be added to the output.     
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **threshold:**  (float) 0.0-1.0 threshold for above comparison. [default=0.9]    
 
 **OUTPUT:** pandas dataFrame with all the compared values, of given labels.     
 
