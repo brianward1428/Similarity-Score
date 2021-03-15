@@ -1,4 +1,4 @@
-# Processome Node Similarity
+# Node Similarity
 
 ## Introduction
 

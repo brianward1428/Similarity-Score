@@ -1,0 +1,16 @@
+/temp/
+/data/
+*.ini
+.*
+*.csv
+*.txt
+*.xlsx
+*.xls
+*.png
+*.html
+*.pkl
+*.zip
+*.pdf
+*.mat
+*.log
+*.pyc
